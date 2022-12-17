@@ -37,8 +37,9 @@ object WikipediaRanking extends WikipediaRankingInterface :
     */
 
   implicit def bool2int(b: Boolean): Int = if (b) 1 else 0
+
   def occurrencesOfLang(lang: String, rdd: RDD[WikipediaArticle]): Int = {
-    rdd.aggregate(0)((u,article)=> u + bool2int(article.mentionsLanguage(lang)),_ + _)
+    rdd.aggregate(0)((sum, article) => sum + bool2int(article.mentionsLanguage(lang)), _ + _)
   }
 
   /* (1) Use `occurrencesOfLang` to compute the ranking of the languages
@@ -60,7 +61,10 @@ object WikipediaRanking extends WikipediaRankingInterface :
    * to the Wikipedia pages in which it occurs.
    */
   def makeIndex(langs: List[String], rdd: RDD[WikipediaArticle]): RDD[(String, Iterable[WikipediaArticle])] = {
-
+    rdd.flatMap(article => {
+      langs.filter(article.mentionsLanguage)
+        .map(lang => (lang, article))
+    }).groupByKey()
   }
 
   /* (2) Compute the language ranking again, but now using the inverted index. Can you notice
@@ -70,7 +74,7 @@ object WikipediaRanking extends WikipediaRankingInterface :
    *   several seconds.
    */
   def rankLangsUsingIndex(index: RDD[(String, Iterable[WikipediaArticle])]): List[(String, Int)] = {
-
+    index.mapValues(_.size).sortBy(-_._2).collect().toList
   }
 
   /* (3) Use `reduceByKey` so that the computation of the index and the ranking are combined.
@@ -81,7 +85,10 @@ object WikipediaRanking extends WikipediaRankingInterface :
    *   several seconds.
    */
   def rankLangsReduceByKey(langs: List[String], rdd: RDD[WikipediaArticle]): List[(String, Int)] = {
-
+    rdd.flatMap(article => {
+      langs.filter(article.mentionsLanguage)
+        .map(lang => (lang, article))
+    }).groupByKey().mapValues(_.size).reduceByKey(_ + _).sortBy(-_._2).collect().toList
   }
 
   def main(args: Array[String]): Unit =
