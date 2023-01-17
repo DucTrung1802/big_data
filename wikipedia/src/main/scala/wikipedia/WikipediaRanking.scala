@@ -87,8 +87,8 @@ object WikipediaRanking extends WikipediaRankingInterface :
   def rankLangsReduceByKey(langs: List[String], rdd: RDD[WikipediaArticle]): List[(String, Int)] = {
     rdd.flatMap(article => {
       langs.filter(article.mentionsLanguage)
-        .map(lang => (lang, article))
-    }).groupByKey().mapValues(_.size).reduceByKey(_ + _).sortBy(-_._2).collect().toList
+        .map(lang => (lang, 1))
+    }).reduceByKey(_ + _).sortBy(-_._2).collect().toList
   }
 
   def main(args: Array[String]): Unit =
